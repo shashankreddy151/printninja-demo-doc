@@ -90,7 +90,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Predicts optimal size based on content type and purpose
 - Suggests eco-friendly alternatives when applicable
 
-![AI Suggestion System]
+### AI Suggestion System
 *The AI-powered print specification suggestion system analyzing a comic book file*
 
 ##### Advanced AI Features
@@ -101,7 +101,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Color distribution analysis for optimal paper selection
 - Text density evaluation for binding recommendations
 
-![Content Analysis]
+### Content Analysis
 *Content analysis breakdown showing detected elements and quality scores*
 
 ###### Smart Budget Optimization
@@ -111,7 +111,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Quality-cost tradeoff visualization
 - Budget-constrained specification finder
 
-![Budget Optimization]
+### Budget Optimization
 *Budget optimization interface showing cost-saving alternatives*
 
 ###### Print Issue Prevention
@@ -121,7 +121,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Binding compatibility warnings for specific content layouts
 - Automated preflight checking with actionable feedback
 
-![Print Issue Prevention]
+### Print Issue Prevention
 *Print issue detection and resolution recommendations*
 
 #### Real-time Quote Calculator
