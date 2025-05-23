@@ -1,6 +1,7 @@
 # PrintNinja Demo Project
 
-![PrintNinja Logo](./public/assets/printninja-logo.png)
+![image](https://github.com/user-attachments/assets/2b6ef460-bc9c-4ac7-a988-0e6899650b8a)
+
 
 > Backend-focused demo project created for a job interview at PrintNinja, showcasing advanced customer and business-oriented features.
 
@@ -480,16 +481,12 @@ The AI suggestion system uses a multi-layered approach:
 ## 5. Screenshots
 
 ### Quote Builder UI
-![Quote Builder](./public/assets/screenshots/quote-builder.png)
+![image](https://github.com/user-attachments/assets/76c8553a-93e6-4962-804e-b26fc7788e1d)
+
 *The multi-step quote builder with real-time pricing updates*
 
-### File Preview Section
-![File Preview](./public/assets/screenshots/file-preview.png)
-*Interactive file preview with print issue detection*
-
 ### Admin Dashboard
-![Admin Dashboard](./public/assets/screenshots/admin-dashboard.png)
-*Order management interface for PrintNinja staff*
+![image](https://github.com/user-attachments/assets/70b4dd39-255b-4da3-ba33-341825d15d01)
 
 ## 6. How to Run Locally
 
