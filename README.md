@@ -4,6 +4,17 @@
 
 > Backend-focused demo project created for a job interview at PrintNinja, showcasing advanced customer and business-oriented features.
 
+## Quick Start Access
+
+To explore the full features of this demo as a logged-in user, use the following credentials:
+
+```
+Email: alice@gmail.com
+Password: Password123!
+```
+
+These credentials will give you access to all user features including saved quotes, order history, and personalized AI recommendations.
+
 ## 1. Overview
 
 ### Purpose
