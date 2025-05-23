@@ -1,7 +1,6 @@
 # PrintNinja Demo Project
 
-![image](https://github.com/user-attachments/assets/2b6ef460-bc9c-4ac7-a988-0e6899650b8a)
-
+![PrintNinja Logo](./public/assets/printninja-logo.png)
 
 > Backend-focused demo project created for a job interview at PrintNinja, showcasing advanced customer and business-oriented features.
 
@@ -90,7 +89,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Predicts optimal size based on content type and purpose
 - Suggests eco-friendly alternatives when applicable
 
-### AI Suggestion System
+![AI Suggestion System](./public/assets/screenshots/ai-suggestions.png)
 *The AI-powered print specification suggestion system analyzing a comic book file*
 
 ##### Advanced AI Features
@@ -101,7 +100,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Color distribution analysis for optimal paper selection
 - Text density evaluation for binding recommendations
 
-### Content Analysis
+![Content Analysis](./public/assets/screenshots/content-analysis.png)
 *Content analysis breakdown showing detected elements and quality scores*
 
 ###### Smart Budget Optimization
@@ -111,7 +110,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Quality-cost tradeoff visualization
 - Budget-constrained specification finder
 
-### Budget Optimization
+![Budget Optimization](./public/assets/screenshots/budget-optimization.png)
 *Budget optimization interface showing cost-saving alternatives*
 
 ###### Print Issue Prevention
@@ -121,7 +120,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Binding compatibility warnings for specific content layouts
 - Automated preflight checking with actionable feedback
 
-### Print Issue Prevention
+![Print Issue Prevention](./public/assets/screenshots/print-issues.png)
 *Print issue detection and resolution recommendations*
 
 #### Real-time Quote Calculator
@@ -429,7 +428,63 @@ Response:
 }
 ```
 
-## 4. Architecture Diagram
+## 4. Database Schema
+
+The application is built on a robust database schema designed to efficiently support all print-related business operations:
+
+![Database Schema](./public/assets/screenshots/db-schema.png)
+*Complete database schema showing relationships between core entities*
+
+### Core Tables
+
+#### Users and Authentication
+- **users** - User accounts and authentication data
+- **auth_tokens** - Secure authentication tokens
+
+#### Orders and Quotes
+- **orders** - Customer orders with status, tracking information
+- **quotes** - Saved quotes with specifications and pricing
+- **quote_files** - Files associated with specific quotes
+- **files** - Uploaded file metadata and analysis results
+
+#### Products and Options
+- **products** - Available print products
+- **order_items** - Items within an order
+- **order_status_history** - Complete order status timeline
+
+#### Payment and Shipping
+- **payments** - Payment transaction records
+- **shipping_addresses** - Customer shipping information
+- **shipping_methods** - Available shipping options
+- **transaction_id** - Unique transaction identifiers
+
+#### Production Management
+- **carrier** - Shipping carrier information
+- **estimated_delivery** - Delivery time calculations
+- **shipment_id** - Shipment tracking data
+
+### Relationships
+
+The schema follows a carefully designed relational model:
+
+1. Each **user** can have multiple **quotes** and **orders**
+2. **quotes** can be converted to **orders** maintaining all specifications
+3. **orders** contain multiple **order_items** with relationships to **products**
+4. **files** are linked to **quotes** through the **quote_files** junction table
+5. Each **order** has a complete **order_status_history** for tracking
+6. **payments** are connected to **orders** with full transaction details
+
+### Database Design Principles
+
+The schema was designed following these key principles:
+
+1. **Normalization** - Tables are normalized to reduce redundancy while maintaining data integrity
+2. **Performance** - Indexes on frequently queried columns for optimal query performance
+3. **Referential Integrity** - Foreign key constraints ensure data consistency
+4. **Scalability** - Schema designed to handle high volume of orders and quotes
+5. **Auditability** - History tables maintain complete record of changes
+
+## 5. Architecture Diagram
 
 ```
 ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
@@ -478,17 +533,21 @@ The AI suggestion system uses a multi-layered approach:
 ![AI Architecture Diagram](./public/assets/screenshots/ai-architecture.png)
 *Detailed architecture of the AI recommendation system*
 
-## 5. Screenshots
+## 6. Screenshots
 
 ### Quote Builder UI
-![image](https://github.com/user-attachments/assets/76c8553a-93e6-4962-804e-b26fc7788e1d)
-
+![Quote Builder](./public/assets/screenshots/quote-builder.png)
 *The multi-step quote builder with real-time pricing updates*
 
-### Admin Dashboard
-![image](https://github.com/user-attachments/assets/70b4dd39-255b-4da3-ba33-341825d15d01)
+### File Preview Section
+![File Preview](./public/assets/screenshots/file-preview.png)
+*Interactive file preview with print issue detection*
 
-## 6. How to Run Locally
+### Admin Dashboard
+![Admin Dashboard](./public/assets/screenshots/admin-dashboard.png)
+*Order management interface for PrintNinja staff*
+
+## 7. How to Run Locally
 
 ### Prerequisites
 - Node.js v18 or later
@@ -561,7 +620,7 @@ VITE_ENABLE_LIVE_CHAT=true
 VITE_ANALYTICS_ID=
 ```
 
-## 7. Implemented Components
+## 8. Implemented Components
 
 Below are the key components implemented in this demo project:
 
@@ -610,7 +669,7 @@ This project is proprietary and created solely for demonstration purposes for Pr
 ## Contact
 For any questions regarding this demo, please contact [your.email@example.com](mailto:your.email@example.com)
 
-## 8. Implementation Highlights
+## 9. Implementation Highlights
 
 ### Technical Innovations
 
@@ -641,30 +700,39 @@ The AI suggestion engine uses a combination of image processing techniques and m
 ![AI Analysis Flow](./public/assets/screenshots/ai-analysis-flow.png)
 *Flow diagram of the file analysis and recommendation process*
 
-#### Database Schema
+#### Database Implementation
 
-The core data model supports complex relationships between products, quotes, and orders:
+The implementation follows the comprehensive schema detailed in Section 4 (Database Schema). Each entity and relationship has been carefully implemented in Supabase:
 
-```
-┌───────────────┐       ┌───────────────┐       ┌───────────────┐
-│ users         │       │ quotes        │       │ orders        │
-├───────────────┤       ├───────────────┤       ├───────────────┤
-│ id            │       │ id            │       │ id            │
-│ email         │       │ user_id       │◄──────┤ quote_id      │
-│ created_at    │       │ specifications│       │ status        │
-└───────┬───────┘       │ price         │       │ tracking_info │
-        │               │ created_at    │       │ created_at    │
-        │               └───────┬───────┘       └───────────────┘
-        │                       │
-        │                       │
-        │               ┌───────▼───────┐       ┌───────────────┐
-        └───────────────► quote_files   │       │ products      │
-                        ├───────────────┤       ├───────────────┤
-                        │ quote_id      │       │ id            │
-                        │ file_id       │       │ name          │
-                        └───────┬───────┘       │ specifications│
-                                │               │ base_price    │
-                                └───────────────┘
+```javascript
+// Example of database access in QuoteService.js
+async function saveQuote(userId, quoteData, files) {
+  const { data, error } = await supabase
+    .from('quotes')
+    .insert({
+      user_id: userId,
+      specifications: quoteData.specifications,
+      price: quoteData.totalPrice,
+      created_at: new Date().toISOString()
+    })
+    .select();
+    
+  if (error) throw error;
+  
+  // Associate uploaded files with the quote
+  if (files && files.length > 0) {
+    const fileAssociations = files.map(file => ({
+      quote_id: data[0].id,
+      file_id: file.id
+    }));
+    
+    await supabase
+      .from('quote_files')
+      .insert(fileAssociations);
+  }
+  
+  return data[0];
+}
 ```
 
 ### Performance Optimizations
@@ -680,7 +748,7 @@ The core data model supports complex relationships between products, quotes, and
 2. **Secure File Handling** - Files are validated, sanitized, and stored with secure access controls
 3. **API Rate Limiting** - Prevents abuse of quote generation and AI analysis endpoints
 
-## 9. Future Development
+## 10. Future Development
 
 While this demo showcases a robust set of features, several enhancements could be implemented in a production environment:
 
@@ -713,3 +781,26 @@ While this demo showcases a robust set of features, several enhancements could b
 
 ![Roadmap](./public/assets/screenshots/future-roadmap.png)
 *Visual roadmap of planned feature enhancements*
+
+## 10. Notes for Implementation
+
+### Adding Screenshots
+The screenshots referenced in this README should be saved in the following location:
+`./public/assets/screenshots/`
+
+Please save the database schema diagram as `db-schema.png` in this directory.
+
+Other recommended screenshots to add:
+- `ai-suggestions.png` - AI-based print specification recommendation UI
+- `content-analysis.png` - Content analysis breakdown interface
+- `budget-optimization.png` - Budget optimization interface
+- `print-issues.png` - Print issue detection interface
+- `quote-builder.png` - Multi-step quote builder interface
+- `file-preview.png` - File preview with error detection
+- `admin-dashboard.png` - Admin dashboard interface
+- `ai-analysis-flow.png` - AI analysis flow diagram
+- `component-structure.png` - Component structure diagram
+- `future-roadmap.png` - Feature roadmap visualization
+
+### Database Schema
+If you need to regenerate the database schema diagram, you can use the Supabase Schema Visualizer or tools like dbdiagram.io using the structure shown in the image.
