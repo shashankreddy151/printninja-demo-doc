@@ -438,51 +438,384 @@ The application is built on a robust database schema designed to efficiently sup
 ### Core Tables
 
 #### Users and Authentication
-- **users** - User accounts and authentication data
-- **auth_tokens** - Secure authentication tokens
+- **users**
+  ```sql
+  CREATE TABLE users (
+    user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    company VARCHAR(255),
+    phone VARCHAR(50),
+    role VARCHAR(50) DEFAULT 'customer',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP
+  );
+  ```
+
+- **auth_tokens**
+  ```sql
+  CREATE TABLE auth_tokens (
+    token_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(user_id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+- **user_preferences**
+  ```sql
+  CREATE TABLE user_preferences (
+    preference_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(user_id) ON DELETE CASCADE,
+    preference_key VARCHAR(100) NOT NULL,
+    preference_value TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, preference_key)
+  );
+  ```
 
 #### Orders and Quotes
-- **orders** - Customer orders with status, tracking information
-- **quotes** - Saved quotes with specifications and pricing
-- **quote_files** - Files associated with specific quotes
-- **files** - Uploaded file metadata and analysis results
+- **quotes**
+  ```sql
+  CREATE TABLE quotes (
+    quote_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    quote_number VARCHAR(50) UNIQUE NOT NULL,
+    project_type VARCHAR(100) NOT NULL,
+    size VARCHAR(100) NOT NULL,
+    binding_type VARCHAR(100) NOT NULL,
+    cover_type VARCHAR(100),
+    cover_paper VARCHAR(100),
+    inside_paper VARCHAR(100) NOT NULL,
+    page_count INTEGER NOT NULL,
+    quantity INTEGER NOT NULL,
+    color VARCHAR(50) NOT NULL,
+    total_price DECIMAL(10, 2) NOT NULL,
+    price_breakdown JSONB,
+    status VARCHAR(50) DEFAULT 'active',
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+- **orders**
+  ```sql
+  CREATE TABLE orders (
+    order_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    quote_id UUID REFERENCES quotes(quote_id),
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    status VARCHAR(50) DEFAULT 'received',
+    total_amount DECIMAL(10, 2) NOT NULL,
+    tax_amount DECIMAL(10, 2) DEFAULT 0,
+    shipping_amount DECIMAL(10, 2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estimated_delivery TIMESTAMP
+  );
+  ```
+
+- **files**
+  ```sql
+  CREATE TABLE files (
+    file_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_size BIGINT NOT NULL,
+    file_type VARCHAR(100) NOT NULL,
+    storage_path VARCHAR(500) NOT NULL,
+    validation_status VARCHAR(50),
+    validation_details JSONB,
+    preview_url VARCHAR(500),
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    analysis_results JSONB
+  );
+  ```
+
+- **quote_files**
+  ```sql
+  CREATE TABLE quote_files (
+    quote_file_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    quote_id UUID REFERENCES quotes(quote_id) ON DELETE CASCADE,
+    file_id UUID REFERENCES files(file_id) ON DELETE CASCADE,
+    file_purpose VARCHAR(100) NOT NULL, -- 'interior', 'cover', 'additional'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (quote_id, file_id)
+  );
+  ```
+
+- **order_status_history**
+  ```sql
+  CREATE TABLE order_status_history (
+    history_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_id UUID REFERENCES orders(order_id) ON DELETE CASCADE,
+    status VARCHAR(50) NOT NULL,
+    notes TEXT,
+    created_by UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
 
 #### Products and Options
-- **products** - Available print products
-- **order_items** - Items within an order
-- **order_status_history** - Complete order status timeline
+- **products**
+  ```sql
+  CREATE TABLE products (
+    product_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100) NOT NULL,
+    min_pages INTEGER,
+    max_pages INTEGER,
+    base_price DECIMAL(10, 2),
+    price_per_page DECIMAL(10, 2),
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+- **product_options**
+  ```sql
+  CREATE TABLE product_options (
+    option_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID REFERENCES products(product_id) ON DELETE CASCADE,
+    option_type VARCHAR(100) NOT NULL, -- 'size', 'binding', 'paper', etc.
+    option_name VARCHAR(255) NOT NULL,
+    option_value VARCHAR(255) NOT NULL,
+    price_modifier DECIMAL(10, 2) DEFAULT 0,
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+- **order_items**
+  ```sql
+  CREATE TABLE order_items (
+    item_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_id UUID REFERENCES orders(order_id) ON DELETE CASCADE,
+    product_id UUID REFERENCES products(product_id) ON DELETE SET NULL,
+    quantity INTEGER NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    total_price DECIMAL(10, 2) NOT NULL,
+    specifications JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
 
 #### Payment and Shipping
-- **payments** - Payment transaction records
-- **shipping_addresses** - Customer shipping information
-- **shipping_methods** - Available shipping options
-- **transaction_id** - Unique transaction identifiers
+- **payments**
+  ```sql
+  CREATE TABLE payments (
+    payment_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_id UUID REFERENCES orders(order_id) ON DELETE SET NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    payment_method VARCHAR(100) NOT NULL,
+    transaction_id VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'pending',
+    payment_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+- **shipping_addresses**
+  ```sql
+  CREATE TABLE shipping_addresses (
+    address_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(user_id) ON DELETE CASCADE,
+    name VARCHAR(255),
+    company VARCHAR(255),
+    address_line1 VARCHAR(255) NOT NULL,
+    address_line2 VARCHAR(255),
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100) NOT NULL,
+    postal_code VARCHAR(20) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    phone VARCHAR(50),
+    is_default BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+- **shipping_methods**
+  ```sql
+  CREATE TABLE shipping_methods (
+    method_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    base_price DECIMAL(10, 2) NOT NULL,
+    estimated_days INTEGER,
+    carrier VARCHAR(100),
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+- **order_shipping**
+  ```sql
+  CREATE TABLE order_shipping (
+    shipping_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_id UUID REFERENCES orders(order_id) ON DELETE CASCADE,
+    address_id UUID REFERENCES shipping_addresses(address_id) ON DELETE SET NULL,
+    method_id UUID REFERENCES shipping_methods(method_id) ON DELETE SET NULL,
+    tracking_number VARCHAR(255),
+    carrier VARCHAR(100),
+    estimated_delivery TIMESTAMP,
+    shipped_date TIMESTAMP,
+    delivery_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
 
 #### Production Management
-- **carrier** - Shipping carrier information
-- **estimated_delivery** - Delivery time calculations
-- **shipment_id** - Shipment tracking data
+- **production_batches**
+  ```sql
+  CREATE TABLE production_batches (
+    batch_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_number VARCHAR(50) UNIQUE NOT NULL,
+    status VARCHAR(50) DEFAULT 'queued',
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+- **batch_orders**
+  ```sql
+  CREATE TABLE batch_orders (
+    batch_order_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_id UUID REFERENCES production_batches(batch_id) ON DELETE CASCADE,
+    order_id UUID REFERENCES orders(order_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (batch_id, order_id)
+  );
+  ```
+
+- **ai_suggestions**
+  ```sql
+  CREATE TABLE ai_suggestions (
+    suggestion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    file_id UUID REFERENCES files(file_id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    suggestion_type VARCHAR(100) NOT NULL,
+    suggestion JSONB NOT NULL,
+    accepted BOOLEAN,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
 
 ### Relationships
 
-The schema follows a carefully designed relational model:
+The schema follows a carefully designed relational model with the following key relationships:
 
-1. Each **user** can have multiple **quotes** and **orders**
-2. **quotes** can be converted to **orders** maintaining all specifications
-3. **orders** contain multiple **order_items** with relationships to **products**
-4. **files** are linked to **quotes** through the **quote_files** junction table
-5. Each **order** has a complete **order_status_history** for tracking
-6. **payments** are connected to **orders** with full transaction details
+1. **Users to Quotes/Orders**: One-to-many relationship where a user can have multiple quotes and orders
+   ```sql
+   ALTER TABLE quotes ADD CONSTRAINT fk_quotes_user FOREIGN KEY (user_id) REFERENCES users(user_id);
+   ALTER TABLE orders ADD CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(user_id);
+   ```
+
+2. **Quotes to Orders**: One-to-one relationship where a quote can be converted to an order
+   ```sql
+   ALTER TABLE orders ADD CONSTRAINT fk_orders_quote FOREIGN KEY (quote_id) REFERENCES quotes(quote_id);
+   ```
+
+3. **Orders to Items**: One-to-many relationship where an order contains multiple items
+   ```sql
+   ALTER TABLE order_items ADD CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(order_id);
+   ```
+
+4. **Files to Quotes**: Many-to-many relationship through the quote_files junction table
+   ```sql
+   ALTER TABLE quote_files ADD CONSTRAINT fk_quote_files_quote FOREIGN KEY (quote_id) REFERENCES quotes(quote_id);
+   ALTER TABLE quote_files ADD CONSTRAINT fk_quote_files_file FOREIGN KEY (file_id) REFERENCES files(file_id);
+   ```
+
+5. **Orders to Status History**: One-to-many relationship tracking all status changes
+   ```sql
+   ALTER TABLE order_status_history ADD CONSTRAINT fk_status_history_order FOREIGN KEY (order_id) REFERENCES orders(order_id);
+   ```
+
+6. **Orders to Payments**: One-to-many relationship for multiple payment transactions
+   ```sql
+   ALTER TABLE payments ADD CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders(order_id);
+   ```
+
+7. **Products to Options**: One-to-many relationship for product configuration options
+   ```sql
+   ALTER TABLE product_options ADD CONSTRAINT fk_product_options_product FOREIGN KEY (product_id) REFERENCES products(product_id);
+   ```
+
+8. **Orders to Shipping**: One-to-one relationship for shipping details
+   ```sql
+   ALTER TABLE order_shipping ADD CONSTRAINT fk_order_shipping_order FOREIGN KEY (order_id) REFERENCES orders(order_id);
+   ```
+
+9. **Production Batches to Orders**: Many-to-many relationship through batch_orders junction table
+   ```sql
+   ALTER TABLE batch_orders ADD CONSTRAINT fk_batch_orders_batch FOREIGN KEY (batch_id) REFERENCES production_batches(batch_id);
+   ALTER TABLE batch_orders ADD CONSTRAINT fk_batch_orders_order FOREIGN KEY (order_id) REFERENCES orders(order_id);
+   ```
+
+### Indexing Strategy
+
+For optimal database performance, the following indexes are implemented:
+
+```sql
+-- User lookup optimization
+CREATE INDEX idx_users_email ON users(email);
+
+-- Quote and order lookup
+CREATE INDEX idx_quotes_user ON quotes(user_id);
+CREATE INDEX idx_orders_user ON orders(user_id);
+CREATE INDEX idx_quotes_status ON quotes(status);
+CREATE INDEX idx_orders_status ON orders(status);
+
+-- File organization
+CREATE INDEX idx_files_user ON files(user_id);
+CREATE INDEX idx_quote_files_quote ON quote_files(quote_id);
+CREATE INDEX idx_quote_files_file ON quote_files(file_id);
+
+-- Order tracking
+CREATE INDEX idx_order_status_history_order ON order_status_history(order_id);
+CREATE INDEX idx_order_status_history_timestamp ON order_status_history(timestamp);
+
+-- Product catalog navigation
+CREATE INDEX idx_products_category ON products(category);
+CREATE INDEX idx_product_options_product ON product_options(product_id);
+CREATE INDEX idx_product_options_type ON product_options(option_type);
+
+-- Payment processing
+CREATE INDEX idx_payments_order ON payments(order_id);
+CREATE INDEX idx_payments_status ON payments(status);
+
+-- Shipping management
+CREATE INDEX idx_shipping_addresses_user ON shipping_addresses(user_id);
+CREATE INDEX idx_order_shipping_order ON order_shipping(order_id);
+```
 
 ### Database Design Principles
 
 The schema was designed following these key principles:
 
-1. **Normalization** - Tables are normalized to reduce redundancy while maintaining data integrity
-2. **Performance** - Indexes on frequently queried columns for optimal query performance
-3. **Referential Integrity** - Foreign key constraints ensure data consistency
-4. **Scalability** - Schema designed to handle high volume of orders and quotes
-5. **Auditability** - History tables maintain complete record of changes
+1. **Normalization** - Tables are normalized to the third normal form (3NF) to reduce redundancy while maintaining data integrity
+2. **Performance** - Strategic indexes on frequently queried columns optimize query performance
+3. **Referential Integrity** - Foreign key constraints ensure data consistency across related tables
+4. **Scalability** - Horizontal partitioning capabilities for high-volume tables like orders and files
+5. **Auditability** - History tables and timestamps maintain complete records of changes
+6. **Security** - Role-based access controls at the database level complement application security
 
 ## 5. Architecture Diagram
 
