@@ -781,26 +781,3 @@ While this demo showcases a robust set of features, several enhancements could b
 
 ![Roadmap](./public/assets/screenshots/future-roadmap.png)
 *Visual roadmap of planned feature enhancements*
-
-## 10. Notes for Implementation
-
-### Adding Screenshots
-The screenshots referenced in this README should be saved in the following location:
-`./public/assets/screenshots/`
-
-Please save the database schema diagram as `db-schema.png` in this directory.
-
-Other recommended screenshots to add:
-- `ai-suggestions.png` - AI-based print specification recommendation UI
-- `content-analysis.png` - Content analysis breakdown interface
-- `budget-optimization.png` - Budget optimization interface
-- `print-issues.png` - Print issue detection interface
-- `quote-builder.png` - Multi-step quote builder interface
-- `file-preview.png` - File preview with error detection
-- `admin-dashboard.png` - Admin dashboard interface
-- `ai-analysis-flow.png` - AI analysis flow diagram
-- `component-structure.png` - Component structure diagram
-- `future-roadmap.png` - Feature roadmap visualization
-
-### Database Schema
-If you need to regenerate the database schema diagram, you can use the Supabase Schema Visualizer or tools like dbdiagram.io using the structure shown in the image.
