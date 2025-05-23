@@ -1,6 +1,7 @@
 # PrintNinja Demo Project
 
-![PrintNinja Logo](./public/assets/printninja-logo.png)
+![image](https://github.com/user-attachments/assets/00944f54-beae-43d2-9f84-d3d15c3c3995)
+
 
 > Backend-focused demo project created for a job interview at PrintNinja, showcasing advanced customer and business-oriented features.
 
@@ -89,7 +90,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Predicts optimal size based on content type and purpose
 - Suggests eco-friendly alternatives when applicable
 
-![AI Suggestion System](./public/assets/screenshots/ai-suggestions.png)
+### AI Suggestion System
 *The AI-powered print specification suggestion system analyzing a comic book file*
 
 ##### Advanced AI Features
@@ -100,7 +101,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Color distribution analysis for optimal paper selection
 - Text density evaluation for binding recommendations
 
-![Content Analysis](./public/assets/screenshots/content-analysis.png)
+### Content Analysis
 *Content analysis breakdown showing detected elements and quality scores*
 
 ###### Smart Budget Optimization
@@ -110,7 +111,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Quality-cost tradeoff visualization
 - Budget-constrained specification finder
 
-![Budget Optimization](./public/assets/screenshots/budget-optimization.png)
+### Budget Optimization
 *Budget optimization interface showing cost-saving alternatives*
 
 ###### Print Issue Prevention
@@ -120,7 +121,7 @@ This project is a comprehensive demonstration of my backend development skills, 
 - Binding compatibility warnings for specific content layouts
 - Automated preflight checking with actionable feedback
 
-![Print Issue Prevention](./public/assets/screenshots/print-issues.png)
+### Print Issue Prevention
 *Print issue detection and resolution recommendations*
 
 #### Real-time Quote Calculator
@@ -432,7 +433,8 @@ Response:
 
 The application is built on a robust database schema designed to efficiently support all print-related business operations:
 
-![Database Schema](./public/assets/screenshots/db-schema.png)
+![image](https://github.com/user-attachments/assets/7cc9e1fa-e0d9-49d5-8740-06354bfc97ca)
+
 *Complete database schema showing relationships between core entities*
 
 ### Core Tables
@@ -863,21 +865,18 @@ The AI suggestion system uses a multi-layered approach:
 3. **Cost Optimization Layer** - Balances quality requirements with budget constraints
 4. **Learning System** - Improves suggestions based on customer feedback and acceptance rates
 
-![AI Architecture Diagram](./public/assets/screenshots/ai-architecture.png)
-*Detailed architecture of the AI recommendation system*
 
 ## 6. Screenshots
 
 ### Quote Builder UI
-![Quote Builder](./public/assets/screenshots/quote-builder.png)
+![image](https://github.com/user-attachments/assets/46f889ad-737d-43f8-b06a-4a6e8dc97da4)
+
 *The multi-step quote builder with real-time pricing updates*
 
-### File Preview Section
-![File Preview](./public/assets/screenshots/file-preview.png)
-*Interactive file preview with print issue detection*
 
 ### Admin Dashboard
-![Admin Dashboard](./public/assets/screenshots/admin-dashboard.png)
+![image](https://github.com/user-attachments/assets/18a6b236-65fa-4148-af60-801cded475db)
+
 *Order management interface for PrintNinja staff*
 
 ## 7. How to Run Locally
