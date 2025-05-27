@@ -819,7 +819,428 @@ The schema was designed following these key principles:
 5. **Auditability** - History tables and timestamps maintain complete records of changes
 6. **Security** - Role-based access controls at the database level complement application security
 
-## 5. Architecture Diagram
+## 5. Salesforce CRM Integration
+
+PrintNinja's advanced customer relationship management capabilities are powered by seamless integration with Salesforce CRM, providing comprehensive customer lifecycle management and business analytics.
+
+### Integration Overview
+
+The platform connects with Salesforce through a robust API integration that synchronizes customer data, order information, and business intelligence in real-time.
+
+```
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│                 │       │                 │       │                 │
+│  PrintNinja     ├───────┤  Salesforce     ├───────┤  Business       │
+│  Platform       │       │  CRM API        │       │  Intelligence   │
+│                 │       │                 │       │                 │
+└─────────────────┘       └─────────────────┘       └─────────────────┘
+```
+
+### Data Synchronization
+
+#### Customer Data Flow
+```javascript
+// Customer synchronization service
+const syncCustomerWithSalesforce = async (userData) => {
+  const salesforceClient = new SalesforceAPI({
+    clientId: process.env.SALESFORCE_CLIENT_ID,
+    clientSecret: process.env.SALESFORCE_CLIENT_SECRET,
+    redirectUri: process.env.SALESFORCE_REDIRECT_URI
+  });
+
+  const contactPayload = {
+    FirstName: userData.first_name,
+    LastName: userData.last_name,
+    Email: userData.email,
+    Company: userData.company,
+    Phone: userData.phone,
+    Print_Ninja_User_ID__c: userData.user_id,
+    Registration_Date__c: userData.created_at,
+    Last_Login__c: userData.last_login
+  };
+
+  const salesforceContact = await salesforceClient.sobject('Contact').create(contactPayload);
+  
+  // Update local database with Salesforce ID
+  await supabase
+    .from('users')
+    .update({ salesforce_contact_id: salesforceContact.id })
+    .eq('user_id', userData.user_id);
+    
+  return salesforceContact;
+};
+```
+
+#### Order Integration
+```javascript
+// Order synchronization with Salesforce Opportunities
+const createSalesforceOpportunity = async (orderData) => {
+  const opportunityPayload = {
+    Name: `PrintNinja Order - ${orderData.order_number}`,
+    AccountId: orderData.salesforce_account_id,
+    ContactId: orderData.salesforce_contact_id,
+    StageName: mapOrderStatusToSalesforceStage(orderData.status),
+    CloseDate: orderData.estimated_delivery,
+    Amount: orderData.total_amount,
+    Order_Number__c: orderData.order_number,
+    Project_Type__c: orderData.project_type,
+    Quantity__c: orderData.quantity,
+    Binding_Type__c: orderData.binding_type,
+    Paper_Type__c: orderData.paper_type,
+    Print_Ninja_Order_ID__c: orderData.order_id
+  };
+
+  const opportunity = await salesforceClient.sobject('Opportunity').create(opportunityPayload);
+  
+  // Create order line items as Opportunity Products
+  for (const item of orderData.order_items) {
+    await salesforceClient.sobject('OpportunityLineItem').create({
+      OpportunityId: opportunity.id,
+      Product2Id: await getOrCreateSalesforceProduct(item.product_id),
+      Quantity: item.quantity,
+      UnitPrice: item.unit_price,
+      TotalPrice: item.total_price
+    });
+  }
+  
+  return opportunity;
+};
+```
+
+### API Integration Endpoints
+
+#### Authentication & Authorization
+```javascript
+// OAuth 2.0 flow for Salesforce integration
+app.post('/api/salesforce/auth', async (req, res) => {
+  const authUrl = `https://login.salesforce.com/services/oauth2/authorize?` +
+    `response_type=code&` +
+    `client_id=${process.env.SALESFORCE_CLIENT_ID}&` +
+    `redirect_uri=${encodeURIComponent(process.env.SALESFORCE_REDIRECT_URI)}&` +
+    `scope=api refresh_token`;
+    
+  res.json({ authUrl });
+});
+
+app.post('/api/salesforce/callback', async (req, res) => {
+  const { code } = req.body;
+  
+  const tokenResponse = await fetch('https://login.salesforce.com/services/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      client_id: process.env.SALESFORCE_CLIENT_ID,
+      client_secret: process.env.SALESFORCE_CLIENT_SECRET,
+      redirect_uri: process.env.SALESFORCE_REDIRECT_URI
+    })
+  });
+  
+  const tokens = await tokenResponse.json();
+  
+  // Store tokens securely for API calls
+  await storeTokens(tokens);
+  
+  res.json({ success: true });
+});
+```
+
+#### Customer Data Retrieval
+```javascript
+// Get customer data from Salesforce
+app.get('/api/customers/:salesforceId/salesforce-data', async (req, res) => {
+  try {
+    const { salesforceId } = req.params;
+    
+    const contact = await salesforceClient.sobject('Contact').retrieve(salesforceId, [
+      'Id', 'FirstName', 'LastName', 'Email', 'Company', 'Phone',
+      'Total_Orders__c', 'Lifetime_Value__c', 'Preferred_Communication__c',
+      'Industry', 'Territory__c', 'Account.Name'
+    ]);
+    
+    // Get related opportunities (orders)
+    const opportunities = await salesforceClient.query(`
+      SELECT Id, Name, StageName, Amount, CloseDate, Order_Number__c,
+             Project_Type__c, Quantity__c, Binding_Type__c
+      FROM Opportunity 
+      WHERE ContactId = '${salesforceId}' 
+      ORDER BY CreatedDate DESC
+      LIMIT 50
+    `);
+    
+    // Get recent activities
+    const activities = await salesforceClient.query(`
+      SELECT Id, Subject, ActivityDate, Description, Type
+      FROM Task 
+      WHERE WhoId = '${salesforceId}' 
+      ORDER BY ActivityDate DESC
+      LIMIT 20
+    `);
+    
+    res.json({
+      contact: contact,
+      orders: opportunities.records,
+      activities: activities.records,
+      analytics: {
+        totalOrders: contact.Total_Orders__c || 0,
+        lifetimeValue: contact.Lifetime_Value__c || 0,
+        avgOrderValue: contact.Lifetime_Value__c / (contact.Total_Orders__c || 1)
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+#### Real-time Data Sync
+```javascript
+// Webhook endpoint for Salesforce updates
+app.post('/api/salesforce/webhook', async (req, res) => {
+  try {
+    const { sobjectType, eventType, sobjectId } = req.body;
+    
+    switch (sobjectType) {
+      case 'Contact':
+        await handleContactUpdate(sobjectId, eventType);
+        break;
+      case 'Opportunity':
+        await handleOpportunityUpdate(sobjectId, eventType);
+        break;
+      case 'Account':
+        await handleAccountUpdate(sobjectId, eventType);
+        break;
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+const handleContactUpdate = async (contactId, eventType) => {
+  const contact = await salesforceClient.sobject('Contact').retrieve(contactId);
+  
+  // Update local user record
+  await supabase
+    .from('users')
+    .update({
+      first_name: contact.FirstName,
+      last_name: contact.LastName,
+      company: contact.Company,
+      phone: contact.Phone,
+      salesforce_updated_at: new Date().toISOString()
+    })
+    .eq('salesforce_contact_id', contactId);
+};
+```
+
+### Business Intelligence Integration
+
+#### Sales Analytics Dashboard
+```javascript
+// Get sales performance data from Salesforce
+app.get('/api/analytics/salesforce-dashboard', async (req, res) => {
+  try {
+    const { timeFrame = '30' } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(timeFrame));
+    
+    // Revenue by product type
+    const revenueByProduct = await salesforceClient.query(`
+      SELECT Project_Type__c, SUM(Amount) total_revenue, COUNT(Id) order_count
+      FROM Opportunity 
+      WHERE CloseDate >= ${startDate.toISOString().split('T')[0]}
+      AND StageName = 'Closed Won'
+      GROUP BY Project_Type__c
+    `);
+    
+    // Customer acquisition metrics
+    const newCustomers = await salesforceClient.query(`
+      SELECT COUNT(Id) new_customers
+      FROM Contact
+      WHERE CreatedDate >= ${startDate.toISOString().split('T')[0]}
+    `);
+    
+    // Sales pipeline
+    const pipeline = await salesforceClient.query(`
+      SELECT StageName, SUM(Amount) pipeline_value, COUNT(Id) opportunity_count
+      FROM Opportunity 
+      WHERE IsClosed = false
+      GROUP BY StageName
+    `);
+    
+    res.json({
+      revenueByProduct: revenueByProduct.records,
+      newCustomers: newCustomers.records[0].new_customers,
+      pipeline: pipeline.records,
+      timeFrame
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+#### Customer Lifecycle Tracking
+```javascript
+// Track customer journey stages
+const updateCustomerStage = async (contactId, stage, details) => {
+  await salesforceClient.sobject('Contact').update(contactId, {
+    Customer_Stage__c: stage,
+    Stage_Updated_Date__c: new Date().toISOString(),
+    Stage_Details__c: details
+  });
+  
+  // Create activity record for stage change
+  await salesforceClient.sobject('Task').create({
+    WhoId: contactId,
+    Subject: `Customer Stage Updated: ${stage}`,
+    Description: details,
+    Type: 'Customer Lifecycle',
+    ActivityDate: new Date().toISOString().split('T')[0],
+    Status: 'Completed'
+  });
+};
+```
+
+### Data Mapping & Transformation
+
+#### PrintNinja to Salesforce Field Mapping
+```javascript
+const FIELD_MAPPINGS = {
+  user: {
+    'user_id': 'Print_Ninja_User_ID__c',
+    'email': 'Email',
+    'first_name': 'FirstName',
+    'last_name': 'LastName',
+    'company': 'Company',
+    'phone': 'Phone',
+    'created_at': 'Registration_Date__c',
+    'last_login': 'Last_Login_Date__c'
+  },
+  order: {
+    'order_id': 'Print_Ninja_Order_ID__c',
+    'order_number': 'Order_Number__c',
+    'project_type': 'Project_Type__c',
+    'total_amount': 'Amount',
+    'status': 'StageName',
+    'estimated_delivery': 'CloseDate',
+    'binding_type': 'Binding_Type__c',
+    'paper_type': 'Paper_Type__c',
+    'quantity': 'Quantity__c'
+  },
+  quote: {
+    'quote_id': 'Print_Ninja_Quote_ID__c',
+    'quote_number': 'Quote_Number__c',
+    'project_type': 'Project_Type__c',
+    'total_price': 'Quote_Amount__c',
+    'status': 'Quote_Status__c',
+    'expires_at': 'Quote_Expiry_Date__c'
+  }
+};
+
+const transformDataForSalesforce = (data, entityType) => {
+  const mapping = FIELD_MAPPINGS[entityType];
+  const transformed = {};
+  
+  Object.keys(data).forEach(key => {
+    if (mapping[key]) {
+      transformed[mapping[key]] = data[key];
+    }
+  });
+  
+  return transformed;
+};
+```
+
+### Error Handling & Retry Logic
+
+```javascript
+class SalesforceService {
+  constructor() {
+    this.maxRetries = 3;
+    this.retryDelay = 1000; // 1 second
+  }
+  
+  async makeAPICall(operation, retries = 0) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (retries < this.maxRetries && this.isRetryableError(error)) {
+        await this.delay(this.retryDelay * Math.pow(2, retries));
+        return this.makeAPICall(operation, retries + 1);
+      }
+      
+      await this.logError(error, operation);
+      throw error;
+    }
+  }
+  
+  isRetryableError(error) {
+    const retryableCodes = [
+      'UNABLE_TO_LOCK_ROW',
+      'REQUEST_LIMIT_EXCEEDED',
+      'TIMEOUT'
+    ];
+    
+    return retryableCodes.some(code => error.message.includes(code));
+  }
+  
+  async logError(error, operation) {
+    await supabase
+      .from('salesforce_sync_errors')
+      .insert({
+        error_message: error.message,
+        operation_type: operation.name,
+        timestamp: new Date().toISOString(),
+        retry_count: this.maxRetries
+      });
+  }
+  
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+```
+
+### Benefits of Salesforce Integration
+
+1. **360° Customer View**: Complete customer lifecycle visibility combining print orders with CRM data
+2. **Sales Pipeline Management**: Track opportunities from quote to completed order
+3. **Marketing Automation**: Trigger campaigns based on print history and customer behavior  
+4. **Revenue Analytics**: Comprehensive reporting on customer lifetime value and product performance
+5. **Customer Service**: Access to complete order history and customer preferences
+6. **Territory Management**: Sales team organization and lead distribution
+7. **Forecasting**: Predictive analytics based on historical data and pipeline
+
+### Custom Salesforce Objects
+
+#### Print-Specific Custom Fields
+```apex
+// Custom fields on Contact object
+Contact.Print_Ninja_User_ID__c (External ID)
+Contact.Total_Orders__c (Formula: COUNT(Opportunities))
+Contact.Lifetime_Value__c (Rollup Summary)
+Contact.Preferred_Paper_Type__c (Picklist)
+Contact.Last_Order_Date__c (Formula)
+Contact.Customer_Segment__c (Picklist: New, Regular, VIP)
+
+// Custom fields on Opportunity object  
+Opportunity.Print_Ninja_Order_ID__c (External ID)
+Opportunity.Order_Number__c (Text)
+Opportunity.Project_Type__c (Picklist)
+Opportunity.Binding_Type__c (Picklist) 
+Opportunity.Paper_Type__c (Picklist)
+Opportunity.Quantity__c (Number)
+Opportunity.Production_Status__c (Picklist)
+```
+
+## 6. Architecture Diagram
 
 ```
 ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
